@@ -153,11 +153,8 @@ tf_ = (F* C)*G_nominal_discrete/(1 + G_nominal_discrete*C);
 pzmap(tf_);
 title('with F');
 plotZeroPolesOnBode((tf_));
-title('with F');
 
 figure;
-tf_ = (C);
+tf_ = (F* C)*G_nominal_discrete/(1 + G_nominal_discrete*C);
 pzmap(tf_)
-title('without F');
-
-
+plotZeroPolesOnBode((tf_))

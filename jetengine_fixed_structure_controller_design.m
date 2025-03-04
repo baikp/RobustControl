@@ -138,11 +138,13 @@ figure;
 bodemag(W3_discrete,'g--',(F * C)*G_set_discrete / (G_set_discrete*C + 1),'r',{1e-1,1e2}), grid, 
 title('Sensitivity function'), legend('W3','T')
 figure;
+subplot(2,1,1);
 step((F * C)*G_set_discrete/(1 + G_set_discrete*C)), grid, title('Closed-loop response');
 hold on;
 step(G_nominal);
 hold off;
-figure;
+
+subplot(2,1,2);
 step((C)*G_set_discrete/(1 + G_set_discrete*C)), grid, title('Closed-loop response');
 hold on;
 step(G_nominal);

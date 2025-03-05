@@ -6,7 +6,7 @@ delay_dtf = tf([-0.5*T_delay 1],[0.5*T_delay 1],Ts);
 %%
 
 %Define the uncertain parameters a,b,c.
-a = ureal('a',0.35,'Range',[0.2 0.5]);
+a = ureal('a',0.3,'Range',[0.1 0.5]);
 b = ureal('b',0.1,'Range',[0.09 0.15]);
 c = ureal('c',1,'Range',[0.8 1.2]);
 %Define the uncertainty LTI model whose parameters ranges.
@@ -21,7 +21,7 @@ G_uncertain_temp = tf(c,[a 1])*tf([-0.5*b 1],[0.5*b 1]);
 %generate a multimodel uncertainty set containing 100 models.
 G_set=usample(G_uncertain_temp,100);
 %bulid up the nominal model
-G_nominal= tf(1,[0.35 1])*tf([-0.5*0.1 1],[0.5*0.1 1]);
+G_nominal= tf(1,[0.3 1])*tf([-0.5*0.1 1],[0.5*0.1 1]);
 % G_nominal= tf(1,[1 0 0] );
 %Get the 1st order weighting function
 [usys,infor] = ucover(G_set,G_nominal,1);
@@ -32,13 +32,12 @@ W2_TF=tf(W2)
 G_above = G_nominal*(1+W2);%Multiplicative uncertainty
 G_below = G_nominal*(1-W2)
 %The blue lines are the model set and the red one is the upper bound using W2.
-figure
-% bodemag(G_set,'b',G_above,'r+',G_below,'g+')
-bodemag((G_nominal - G_set)/G_nominal,'b',infor.W1,'r+')
+% figure
+% bodemag((G_nominal - G_set)/G_nominal,'b',infor.W1,'r+')
 H = ultidyn("H",1);
 G_uncertain = G_nominal*(1 + H*infor.W1);
-figure;
-bodemag(H*infor.W1,'b',infor.W1,'r+')
+% figure;
+% bodemag(H*infor.W1,'b',infor.W1,'r+')
 
 G_nominal_discrete = c2d(G_nominal,Ts,'zoh');
 % G_nominal_discrete = tf(1,[0.35 1],Ts)*delay_dtf;
@@ -52,20 +51,20 @@ G_set_discrete = c2d(G_set,Ts,'zoh');
 %% mixsyn
 
 W1_discrete = makeweight(33,0.2*2*pi,0.5,Ts);
+W2_discrete = makeweight(0.5,0.6*2*pi,33,Ts);
 
 W3_discrete = makeweight(0.2,2.0*2*pi,20,Ts);
 
 figure
 bodemag(W2_TF,'+');
 hold on;
-bodemag(W3_discrete);
+% bodemag(W3_discrete);
+bodemag(W2_discrete);
 bodemag(W1_discrete);
 hold off;
-legend('W2_{TF}','W3','W1');
-% W1_discrete = c2d(W1,Ts,'zoh');
-W2_discrete = c2d(W2,Ts,'zoh');
-% W3_discrete = c2d(W3,Ts,'zoh');
+legend('W2_{TF}','W2','W1');
 G_uncertain_discrete = G_nominal_discrete*(1 + H*W2_discrete);
+
 % [Kss,CL,gamma] = mixsyn(G_nominal,W1,[],W3);
 % K = tf(Kss) ;
 % gamma
@@ -97,7 +96,7 @@ Sum4 = sumblk('us = u');
 
 % Connect the blocks together
 % T0 = connect(G,Wr,Wd,Wn,Sp,C0,F0,Sum1,Sum2,Sum3,Sum4,{'rw','nw','dw'},{'y'});
-T0 = connect(G,Wd,Wn,C0,F0,Sum1,Sum2,Sum3,Sum4,{'rw','nw','dw'},{'y'});
+T0 = connect(G,Wd,Wn,C0,Sum1,Sum2,Sum3,Sum4,{'r','nw','dw'},{'y'});
 
 T0.Blocks
 %%
@@ -123,20 +122,26 @@ T = feedback(G_nominal_discrete*C,tf(1));
 % bodemag(W1_discrete,'r--',Sens_tilt,'b',{1e-1,1e2}), grid, 
 % title('Sensitivity function & W1'), legend('W1','S')
 
-figure;
-bodemag(W2_discrete,'r--',T,'b',{1e-1,1e2}), grid, 
-title('Sensitivity function'), legend('W2','T')
-
-norm(W2_discrete*T,inf)% robust stability
+% figure;
+% bodemag(W2_discrete,'r--',T,'b',{1e-1,1e2}), grid, 
+% title('Sensitivity function'), legend('W2','T')
+W2_discrete_1 = c2d(W2_TF,Ts,'zoh');  
+norm(W2_discrete_1*T,inf)% robust stability
 norm(W1_discrete*Sens,inf)% robust stability
-two_tf_norm_s_hinfnorm(W2_discrete*T,W1_discrete*Sens) %robust stability + robust performance
+two_tf_norm_s_hinfnorm(W2_discrete_1*T,W1_discrete*Sens) %robust stability + robust performance
 
 %% 
-F0 = tf([1/1.8 1],[1/2.3 1]);    % filter parameterized by a
+% G_nominal= tf(1,[0.25 1])*tf([-0.5*0.15 1],[0.5*0.15 1]);
+% G_nominal_discrete = c2d(G_nominal,Ts,'zoh');
+
+F0 = tf([1/5 1],[1/7 1])*tf(1,[1/8 1]);    % filter parameterized by a
 F = c2d(F0,Ts,'zoh');
 figure;
-bodemag(W3_discrete,'g--',(F * C)*G_set_discrete / (G_set_discrete*C + 1),'r',{1e-1,1e2}), grid, 
-title('Sensitivity function'), legend('W3','T')
+bodemag(W2_discrete,'g--',( C)*G_set_discrete / (G_set_discrete*C + 1),'r',{1e-1,1e2}), grid, 
+title('T-W2'), legend('W2','T');
+figure;
+bodemag(W2_discrete,'g--',( F*C)*G_set_discrete / (G_set_discrete*C + 1),'r',{1e-1,1e2}), grid, 
+title('Try-W2'), legend('W2','Try');
 figure;
 subplot(2,1,1);
 step((F * C)*G_set_discrete/(1 + G_set_discrete*C)), grid, title('Closed-loop response');
@@ -151,15 +156,21 @@ step(G_nominal);
 hold off;
 
 figure;
+step(1/(1 + G_set_discrete*C)), grid, title('disturbance response');
+hold on;
+step(1/(1 + G_nominal_discrete*C));
+hold off;
+
+figure;
 tf_ = (F* C)*G_nominal_discrete/(1 + G_nominal_discrete*C);
 pzmap(tf_);
 title('with F');
 plotZeroPolesOnBode((tf_));
 title('with F');
-
-figure;
-tf_ = (C);
-pzmap(tf_)
-title('without F');
+% 
+% figure;
+% tf_ = (C);
+% pzmap(tf_)
+% title('without F');
 
 
